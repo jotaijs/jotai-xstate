@@ -1,5 +1,5 @@
-import { atom } from 'jotai'
-import type { Atom, Getter, WritableAtom } from 'jotai'
+import { atom } from 'jotai/vanilla'
+import type { Getter, WritableAtom } from 'jotai/vanilla'
 import { interpret } from 'xstate'
 import type {
   AnyInterpreter,
@@ -58,7 +58,7 @@ export function atomWithMachine<
   getOptions?: Options<TMachine> | ((get: Getter) => Options<TMachine>)
 ): WritableAtom<
   StateFrom<TMachine>,
-  MaybeParam<Prop<TInterpreter, 'send'>> | typeof RESTART,
+  [MaybeParam<Prop<TInterpreter, 'send'>> | typeof RESTART],
   void
 > {
   const cachedMachineAtom = atom<{
@@ -72,9 +72,9 @@ export function atomWithMachine<
         return cachedMachine
       }
       let initializing = true
-      const safeGet = (a: Atom<unknown>) => {
+      const safeGet: typeof get = (...args) => {
         if (initializing) {
-          return get(a)
+          return get(...args)
         }
         throw new Error('get not allowed after initialization')
       }
@@ -108,7 +108,7 @@ export function atomWithMachine<
       const service = interpret(machineWithConfig, interpreterOptions)
       return { machine: machineWithConfig, service }
     },
-    (get, set, _arg) => {
+    (get, set) => {
       set(cachedMachineAtom, get(machineAtom))
     }
   )
@@ -166,7 +166,7 @@ export function atomWithMachine<
       if (event === RESTART) {
         service.stop()
         set(cachedMachineAtom, null)
-        set(machineAtom, null)
+        set(machineAtom)
         const { service: newService } = get(machineAtom)
         newService.onTransition((nextState: any) => {
           set(cachedMachineStateAtom, nextState)

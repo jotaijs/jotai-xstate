@@ -1,6 +1,6 @@
 import React, { StrictMode } from 'react'
 import { fireEvent, render, waitFor } from '@testing-library/react'
-import { useAtom } from 'jotai'
+import { useAtom } from 'jotai/react'
 import { assign, createMachine } from 'xstate'
 import { RESTART, atomWithMachine } from '../src/index'
 

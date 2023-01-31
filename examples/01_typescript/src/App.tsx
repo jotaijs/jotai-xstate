@@ -1,7 +1,7 @@
 import React from 'react'
-import { atomWithMachine } from 'jotai-xstate'
 import { Provider, useAtom } from 'jotai/react'
 import { atom } from 'jotai/vanilla'
+import { atomWithMachine } from 'jotai-xstate'
 import { assign, createMachine } from 'xstate'
 
 const createEditableMachine = (value: string) =>

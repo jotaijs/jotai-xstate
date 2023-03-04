@@ -65,6 +65,10 @@ export function atomWithMachine<
     machine: AnyStateMachine
     service: AnyInterpreter
   } | null>(null)
+  if (process.env.NODE_ENV !== 'production') {
+    cachedMachineAtom.debugPrivate = true
+  }
+
   const machineAtom = atom(
     (get) => {
       const cachedMachine = get(cachedMachineAtom)
@@ -118,6 +122,9 @@ export function atomWithMachine<
   }
 
   const cachedMachineStateAtom = atom<StateFrom<TMachine> | null>(null)
+  if (process.env.NODE_ENV !== 'production') {
+    cachedMachineStateAtom.debugPrivate = true
+  }
 
   const machineStateAtom = atom(
     (get) =>
@@ -135,6 +142,10 @@ export function atomWithMachine<
       })
     }
   )
+
+  if (process.env.NODE_ENV !== 'production') {
+    machineStateAtom.debugPrivate = true
+  }
 
   machineStateAtom.onMount = (initialize) => {
     let unsub: (() => void) | undefined | false

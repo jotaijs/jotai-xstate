@@ -1,6 +1,5 @@
 import { type Getter, atom } from 'jotai'
 import {
-  type ActorRefFrom,
   type AnyStateMachine,
   type EventFromLogic,
   type Interpreter,
@@ -10,24 +9,22 @@ import { isGetter } from './utils'
 
 export function atomWithActorSubscription<
   TMachine extends AnyStateMachine = AnyStateMachine,
-  Parent extends ActorRefFrom<AnyStateMachine> = ActorRefFrom<AnyStateMachine>
->(
-  systemId: string | ((get: Getter) => string),
-  getMachine: Parent | ((get: Getter) => Parent)
-) {
-  const providedMachineAtom = atom<null | {
-    machine: Parent
-    actor: Interpreter<TMachine, EventFromLogic<TMachine>>
-  }>(null)
+  TActorRef extends Interpreter<
+    TMachine,
+    EventFromLogic<AnyStateMachine>
+  > = Interpreter<TMachine, EventFromLogic<TMachine>>,
+  TSend extends EventFromLogic<TMachine> = EventFromLogic<TMachine>
+>(getActor: TActorRef | ((get: Getter) => TActorRef)) {
+  const actorRefAtom = atom<null | TActorRef>(null)
 
-  const cachedMachineStateAtom = atom<SnapshotFrom<TMachine> | null>(null)
+  const cachedMachineStateAtom = atom<SnapshotFrom<TActorRef> | null>(null)
   if (process.env['NODE_ENV'] !== 'production') {
     cachedMachineStateAtom.debugPrivate = true
   }
 
-  const machineOperatorAtom = atom(
+  const actorOperatorAtom = atom(
     (get) => {
-      const interpretedMachine = get(providedMachineAtom)
+      const interpretedMachine = get(actorRefAtom)
       if (interpretedMachine) return interpretedMachine
 
       let initializing = true
@@ -37,34 +34,23 @@ export function atomWithActorSubscription<
         }
         throw new Error('get not allowed after initialization')
       }
-      const id = isGetter(systemId) ? systemId(safeGet) : systemId
-      const machine = isGetter(getMachine) ? getMachine(safeGet) : getMachine
-
-      const foundActor = machine.system?.get(id)
-      if (!foundActor) {
-        throw new Error(`No actor found with id ${id}`)
-      }
-
+      const actor = isGetter(getActor) ? getActor(safeGet) : getActor
       initializing = false
-
-      return {
-        machine,
-        actor: foundActor as Interpreter<TMachine, EventFromLogic<TMachine>>,
-      }
+      return actor
     },
     (get, set) => {
-      if (get(providedMachineAtom) === null) return
-      set(providedMachineAtom, get(machineOperatorAtom))
+      if (get(actorRefAtom) === null) return
+      set(actorRefAtom, get(actorOperatorAtom))
     }
   )
-  machineOperatorAtom.onMount = (commit) => {
+  actorOperatorAtom.onMount = (commit) => {
     commit()
   }
 
   const actorOrchestratorAtom = atom(
-    (get) => get(machineOperatorAtom).actor,
+    (get) => get(actorOperatorAtom),
     (get, set, registerCleanup: (cleanup: () => void) => void) => {
-      const { actor } = get(machineOperatorAtom)
+      const actor = get(actorOperatorAtom)
       const subscription = actor.subscribe((nextState) => {
         set(cachedMachineStateAtom, nextState)
       })
@@ -100,9 +86,9 @@ export function atomWithActorSubscription<
       const actorRef = get(actorOrchestratorAtom)
       return { state, actorRef }
     },
-    (get, set, action: EventFromLogic<TMachine>) => {
+    (get, set, action: TSend) => {
       const actor = get(actorOrchestratorAtom)
-      actor.send(action as EventFromLogic<TMachine>)
+      actor.send(action)
     }
   )
 

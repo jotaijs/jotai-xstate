@@ -1,4 +1,4 @@
-import { type Getter, type WritableAtom, atom } from 'jotai'
+import { type Getter, atom } from 'jotai'
 import {
   type AnyStateMachine,
   type EventFromLogic,
@@ -10,7 +10,10 @@ import {
 } from 'xstate'
 import { isGetter } from './utils'
 
-export function atomWithActor<TMachine extends AnyStateMachine>(
+export function atomWithActor<
+  TMachine extends AnyStateMachine,
+  TSend extends EventFromLogic<TMachine> = EventFromLogic<TMachine>
+>(
   getMachine: TMachine | ((get: Getter) => TMachine),
   getOptions?:
     | Partial<InterpreterOptions<TMachine>>
@@ -112,9 +115,9 @@ export function atomWithActor<TMachine extends AnyStateMachine>(
       const actorRef = get(actorOrchestratorAtom)
       return { state, actorRef }
     },
-    (get, set, action: EventFromLogic<TMachine>) => {
+    (get, set, action: TSend) => {
       const actor = get(actorOrchestratorAtom)
-      actor.send(action as EventFromLogic<TMachine>)
+      actor.send(action)
     }
   )
 

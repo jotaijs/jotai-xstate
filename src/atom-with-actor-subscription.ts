@@ -11,7 +11,7 @@ export function atomWithActorSubscription<
   TMachine extends AnyStateMachine = AnyStateMachine,
   TActorRef extends Interpreter<
     TMachine,
-    EventFromLogic<AnyStateMachine>
+    EventFromLogic<TMachine>
   > = Interpreter<TMachine, EventFromLogic<TMachine>>,
   TSend extends EventFromLogic<TMachine> = EventFromLogic<TMachine>
 >(getActor: TActorRef | ((get: Getter) => TActorRef)) {

@@ -22,6 +22,9 @@ const childMachine = createMachine({
       ],
     },
   },
+  types: {} as {
+    events: { type: 'child.start' }
+  },
 })
 
 const appMachine = createMachine({
@@ -64,8 +67,8 @@ const appMachine = createMachine({
 
 const appMachineAtom = atomWithActor(appMachine)
 
-const childMachineAtom = atomWithActorSubscription<typeof childMachine>(
-  (get) => get(appMachineAtom).actorRef
+const childMachineAtom = atomWithActorSubscription<typeof childMachine>((get) =>
+  get(appMachineAtom).actorRef.system.get('childMachine')
 )
 
 export default function Page() {

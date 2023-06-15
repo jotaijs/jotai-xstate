@@ -1,7 +1,7 @@
 import React from 'react'
 import { Provider, useAtom } from 'jotai/react'
 import { atom } from 'jotai/vanilla'
-import { atomWithMachine } from 'jotai-xstate'
+import { atomWithActor } from 'jotai-xstate'
 import { assign, createMachine } from 'xstate'
 
 const createEditableMachine = (value: string) =>
@@ -23,7 +23,7 @@ const createEditableMachine = (value: string) =>
           commit: {
             target: 'reading',
             actions: assign({
-              value: (_, { value }) => value,
+              value: ({ event }) => event.value,
             }),
           },
         },
@@ -32,12 +32,12 @@ const createEditableMachine = (value: string) =>
   })
 
 const defaultTextAtom = atom('edit me')
-const editableMachineAtom = atomWithMachine((get) =>
+const editableMachineAtom = atomWithActor((get) =>
   createEditableMachine(get(defaultTextAtom))
 )
 
 const Toggle = () => {
-  const [state, send] = useAtom(editableMachineAtom)
+  const [{ state }, send] = useAtom(editableMachineAtom)
 
   return (
     <div>
@@ -54,7 +54,7 @@ const Toggle = () => {
               send({ type: 'commit', value: e.currentTarget.value })
             }
             if (e.key === 'Escape') {
-              send('cancel')
+              send({ type: 'cancel' })
             }
           }}
         />

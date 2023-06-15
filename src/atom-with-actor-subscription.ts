@@ -100,13 +100,7 @@ export function atomWithActorSubscription<
       const actorRef = get(actorOrchestratorAtom)
       return { state, actorRef }
     },
-    (
-      get,
-      set,
-      action:
-        | EventFromLogic<TMachine>
-        | ({ type: string } & Record<string, unknown>)
-    ) => {
+    (get, set, action: EventFromLogic<TMachine>) => {
       const actor = get(actorOrchestratorAtom)
       actor.send(action as EventFromLogic<TMachine>)
     }

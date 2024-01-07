@@ -1,195 +1,67 @@
+import type { Getter } from 'jotai/vanilla'
 import { atom } from 'jotai/vanilla'
-import type { Getter, WritableAtom } from 'jotai/vanilla'
-import { interpret } from 'xstate'
-import type {
-  AnyInterpreter,
-  AnyStateMachine,
-  AreAllImplementationsAssumedToBeProvided,
-  EventObject,
-  InternalMachineOptions,
-  InterpreterFrom,
-  InterpreterOptions,
-  Prop,
-  StateConfig,
-  StateFrom,
-} from 'xstate'
+import type { Actor, ActorOptions, AnyStateMachine, StateFrom } from 'xstate'
+import { createActor } from 'xstate'
 
 export const RESTART = Symbol()
 
-export interface MachineAtomOptions<TContext, TEvent extends EventObject> {
-  /**
-   * If provided, will be merged with machine's `context`.
-   */
-  context?: Partial<TContext>
-  /**
-   * The state to rehydrate the machine to. The machine will
-   * start at this state instead of its `initialState`.
-   */
-  state?: StateConfig<TContext, TEvent>
-}
-
-type Options<TMachine extends AnyStateMachine> =
-  AreAllImplementationsAssumedToBeProvided<
-    TMachine['__TResolvedTypesMeta']
-  > extends false
-    ? InterpreterOptions &
-        MachineAtomOptions<TMachine['__TContext'], TMachine['__TEvent']> &
-        InternalMachineOptions<
-          TMachine['__TContext'],
-          TMachine['__TEvent'],
-          TMachine['__TResolvedTypesMeta'],
-          true
-        >
-    : InterpreterOptions &
-        MachineAtomOptions<TMachine['__TContext'], TMachine['__TEvent']> &
-        InternalMachineOptions<
-          TMachine['__TContext'],
-          TMachine['__TEvent'],
-          TMachine['__TResolvedTypesMeta']
-        >
-
-type MaybeParam<T> = T extends (v: infer V) => unknown ? V : never
-
-export function atomWithMachine<
-  TMachine extends AnyStateMachine,
-  TInterpreter = InterpreterFrom<TMachine>
->(
+export function atomWithMachine<TMachine extends AnyStateMachine>(
   getMachine: TMachine | ((get: Getter) => TMachine),
-  getOptions?: Options<TMachine> | ((get: Getter) => Options<TMachine>)
-): WritableAtom<
-  StateFrom<TMachine>,
-  [MaybeParam<Prop<TInterpreter, 'send'>> | typeof RESTART],
-  void
-> {
+  options?: ActorOptions<TMachine>
+) {
   const cachedMachineAtom = atom<{
-    machine: AnyStateMachine
-    service: AnyInterpreter
+    machine: TMachine
+    actor: Actor<TMachine>
   } | null>(null)
-  if (process.env.NODE_ENV !== 'production') {
-    cachedMachineAtom.debugPrivate = true
-  }
+
+  const cachedStateAtom = atom<{
+    snapshot: StateFrom<TMachine>
+  } | null>(null)
 
   const machineAtom = atom(
     (get) => {
       const cachedMachine = get(cachedMachineAtom)
-      if (cachedMachine) {
-        return cachedMachine
-      }
-      let initializing = true
-      const safeGet: typeof get = (...args) => {
-        if (initializing) {
-          return get(...args)
-        }
-        throw new Error('get not allowed after initialization')
-      }
-      const machine = isGetter(getMachine) ? getMachine(safeGet) : getMachine
-      const options = isGetter(getOptions) ? getOptions(safeGet) : getOptions
-      initializing = false
-      const {
-        guards,
-        actions,
-        services,
-        delays,
-        context,
-        ...interpreterOptions
-      } = options || {}
 
-      const machineConfig = {
-        ...(guards && { guards }),
-        ...(actions && { actions }),
-        ...(services && { services }),
-        ...(delays && { delays }),
-      }
+      // machine only initialize once never change !!!
+      if (cachedMachine) return cachedMachine
 
-      const machineWithConfig = machine.withConfig(
-        machineConfig as any,
-        () => ({
-          ...machine.context,
-          ...context,
-        })
-      )
+      const machine = isGetter(getMachine) ? getMachine(get) : getMachine
+      const actor = createActor(machine, options)
 
-      const service = interpret(machineWithConfig, interpreterOptions)
-      return { machine: machineWithConfig, service }
+      return { machine, actor }
     },
     (get, set) => {
-      set(cachedMachineAtom, get(machineAtom))
+      const { machine, actor } = get(machineAtom)
+      set(cachedMachineAtom, { machine, actor })
+      set(cachedStateAtom, { snapshot: actor.getSnapshot() })
+      actor.subscribe((snapshot) => {
+        set(cachedStateAtom, { snapshot })
+      })
+      actor.start()
     }
   )
 
-  machineAtom.onMount = (commit) => {
-    commit()
-  }
+  // atom only onMount once never change !!!
+  machineAtom.onMount = (set) => void set()
 
-  const cachedMachineStateAtom = atom<StateFrom<TMachine> | null>(null)
-  if (process.env.NODE_ENV !== 'production') {
-    cachedMachineStateAtom.debugPrivate = true
-  }
-
-  const machineStateAtom = atom(
+  return atom(
     (get) =>
-      get(cachedMachineStateAtom) ??
-      (get(machineAtom).machine.initialState as StateFrom<TMachine>),
-    (get, set, registerCleanup: (cleanup: () => void) => void) => {
-      const { service } = get(machineAtom)
-      service.onTransition((nextState: any) => {
-        set(cachedMachineStateAtom, nextState)
-      })
-      service.start()
-      registerCleanup(() => {
-        const { service } = get(machineAtom)
-        service.stop()
-      })
-    }
-  )
-
-  if (process.env.NODE_ENV !== 'production') {
-    machineStateAtom.debugPrivate = true
-  }
-
-  machineStateAtom.onMount = (initialize) => {
-    let unsub: (() => void) | undefined | false
-
-    initialize((cleanup) => {
-      if (unsub === false) {
-        cleanup()
-      } else {
-        unsub = cleanup
-      }
-    })
-
-    return () => {
-      if (unsub) {
-        unsub()
-      }
-      unsub = false
-    }
-  }
-
-  const machineStateWithServiceAtom = atom(
-    (get) => get(machineStateAtom),
+      get(cachedStateAtom)?.snapshot ?? get(machineAtom).actor.getSnapshot(),
     (
       get,
       set,
-      event: Parameters<AnyInterpreter['send']>[0] | typeof RESTART
+      event: Parameters<Actor<TMachine>['send']>[0] | typeof RESTART
     ) => {
-      const { service } = get(machineAtom)
+      const { actor } = get(machineAtom)
       if (event === RESTART) {
-        service.stop()
+        actor.stop()
         set(cachedMachineAtom, null)
         set(machineAtom)
-        const { service: newService } = get(machineAtom)
-        newService.onTransition((nextState: any) => {
-          set(cachedMachineStateAtom, nextState)
-        })
-        newService.start()
       } else {
-        service.send(event)
+        actor.send(event)
       }
     }
   )
-
-  return machineStateWithServiceAtom
 }
 
 const isGetter = <T>(v: T | ((get: Getter) => T)): v is (get: Getter) => T =>

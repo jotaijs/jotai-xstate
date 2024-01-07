@@ -24,7 +24,12 @@ it('toggle machine', async () => {
     const [state, send] = useAtom(toggleMachineAtom)
 
     return (
-      <button onClick={() => send('TOGGLE')}>
+      <button
+        onClick={() =>
+          send({
+            type: 'TOGGLE',
+          })
+        }>
         {state.value === 'inactive'
           ? 'Click to activate'
           : 'Active! Click to deactivate'}
@@ -53,7 +58,7 @@ it('restartable machine', async () => {
       id: 'toggle',
       initial: 'inactive',
       context: { counter: 0 },
-      schema: { context: {} as { counter: number } },
+      types: { context: {} as { counter: number } },
       on: { DISABLE: '.final' },
       states: {
         inactive: {
@@ -74,7 +79,7 @@ it('restartable machine', async () => {
     {
       actions: {
         increment: assign({
-          counter: (prev) => prev.counter + 1,
+          counter: ({ context: prev }) => prev.counter + 1,
         }),
       },
     }
@@ -88,7 +93,7 @@ it('restartable machine', async () => {
     return (
       <>
         <button
-          onClick={() => send('PRESS')}
+          onClick={() => send({ type: 'PRESS' })}
           disabled={state.value === 'final'}>
           {state.value === 'inactive'
             ? 'Click to activate'
@@ -99,7 +104,7 @@ it('restartable machine', async () => {
         <div>Count: {state.context.counter}</div>
         <button
           onClick={() => {
-            send(state.value === 'final' ? RESTART : 'DISABLE')
+            send(state.value === 'final' ? RESTART : { type: 'DISABLE' })
           }}>
           {state.value === 'final' ? 'Restart machine' : 'Go to final state'}
         </button>

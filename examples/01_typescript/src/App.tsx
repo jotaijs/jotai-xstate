@@ -5,11 +5,14 @@ import { atomWithMachine } from 'jotai-xstate'
 import { assign, createMachine } from 'xstate'
 
 const createEditableMachine = (value: string) =>
-  createMachine<{ value: string }>({
+  createMachine({
     id: 'editable',
     initial: 'reading',
     context: {
       value,
+    },
+    types: {
+      context: {} as { value: string },
     },
     states: {
       reading: {
@@ -23,7 +26,7 @@ const createEditableMachine = (value: string) =>
           commit: {
             target: 'reading',
             actions: assign({
-              value: (_, { value }) => value,
+              value: ({ context }) => context.value,
             }),
           },
         },
@@ -54,7 +57,7 @@ const Toggle = () => {
               send({ type: 'commit', value: e.currentTarget.value })
             }
             if (e.key === 'Escape') {
-              send('cancel')
+              send({ type: 'cancel' })
             }
           }}
         />

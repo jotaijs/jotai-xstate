@@ -1,1 +1,1 @@
-export { atomWithMachine, RESTART } from './atomWithMachine'
+export { atomWithMachine, RESTART } from './atomWithMachine.js';

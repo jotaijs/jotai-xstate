@@ -1,8 +1,9 @@
-import React from 'react'
-import { Provider, useAtom } from 'jotai/react'
-import { atom } from 'jotai/vanilla'
-import { atomWithMachine } from 'jotai-xstate'
-import { assign, createMachine } from 'xstate'
+/* eslint jsx-a11y/no-autofocus: off */
+
+import { Provider, useAtom } from 'jotai/react';
+import { atom } from 'jotai/vanilla';
+import { atomWithMachine } from 'jotai-xstate';
+import { assign, createMachine } from 'xstate';
 
 const createEditableMachine = (value: string) =>
   createMachine<{ value: string }>({
@@ -29,15 +30,15 @@ const createEditableMachine = (value: string) =>
         },
       },
     },
-  })
+  });
 
-const defaultTextAtom = atom('edit me')
+const defaultTextAtom = atom('edit me');
 const editableMachineAtom = atomWithMachine((get) =>
-  createEditableMachine(get(defaultTextAtom))
-)
+  createEditableMachine(get(defaultTextAtom)),
+);
 
 const Toggle = () => {
-  const [state, send] = useAtom(editableMachineAtom)
+  const [state, send] = useAtom(editableMachineAtom);
 
   return (
     <div>
@@ -51,10 +52,10 @@ const Toggle = () => {
           onBlur={(e) => send({ type: 'commit', value: e.currentTarget.value })}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
-              send({ type: 'commit', value: e.currentTarget.value })
+              send({ type: 'commit', value: e.currentTarget.value });
             }
             if (e.key === 'Escape') {
-              send('cancel')
+              send('cancel');
             }
           }}
         />
@@ -66,13 +67,13 @@ const Toggle = () => {
         commit. Press <code>esc</code> to cancel.
       </div>
     </div>
-  )
-}
+  );
+};
 
 const App = () => (
   <Provider>
     <Toggle />
   </Provider>
-)
+);
 
-export default App
+export default App;

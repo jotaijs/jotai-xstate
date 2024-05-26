@@ -1,6 +1,8 @@
-import { atom } from 'jotai/vanilla'
-import type { Getter, WritableAtom } from 'jotai/vanilla'
-import { interpret } from 'xstate'
+/* eslint @typescript-eslint/no-explicit-any: off */
+
+import { atom } from 'jotai/vanilla';
+import type { Getter, WritableAtom } from 'jotai/vanilla';
+import { interpret } from 'xstate';
 import type {
   AnyInterpreter,
   AnyStateMachine,
@@ -12,20 +14,20 @@ import type {
   Prop,
   StateConfig,
   StateFrom,
-} from 'xstate'
+} from 'xstate';
 
-export const RESTART = Symbol()
+export const RESTART = Symbol();
 
 export interface MachineAtomOptions<TContext, TEvent extends EventObject> {
   /**
    * If provided, will be merged with machine's `context`.
    */
-  context?: Partial<TContext>
+  context?: Partial<TContext>;
   /**
    * The state to rehydrate the machine to. The machine will
    * start at this state instead of its `initialState`.
    */
-  state?: StateConfig<TContext, TEvent>
+  state?: StateConfig<TContext, TEvent>;
 }
 
 type Options<TMachine extends AnyStateMachine> =
@@ -46,45 +48,45 @@ type Options<TMachine extends AnyStateMachine> =
           TMachine['__TContext'],
           TMachine['__TEvent'],
           TMachine['__TResolvedTypesMeta']
-        >
+        >;
 
-type MaybeParam<T> = T extends (v: infer V) => unknown ? V : never
+type MaybeParam<T> = T extends (v: infer V) => unknown ? V : never;
 
 export function atomWithMachine<
   TMachine extends AnyStateMachine,
-  TInterpreter = InterpreterFrom<TMachine>
+  TInterpreter = InterpreterFrom<TMachine>,
 >(
   getMachine: TMachine | ((get: Getter) => TMachine),
-  getOptions?: Options<TMachine> | ((get: Getter) => Options<TMachine>)
+  getOptions?: Options<TMachine> | ((get: Getter) => Options<TMachine>),
 ): WritableAtom<
   StateFrom<TMachine>,
   [MaybeParam<Prop<TInterpreter, 'send'>> | typeof RESTART],
   void
 > {
   const cachedMachineAtom = atom<{
-    machine: AnyStateMachine
-    service: AnyInterpreter
-  } | null>(null)
+    machine: AnyStateMachine;
+    service: AnyInterpreter;
+  } | null>(null);
   if (process.env.NODE_ENV !== 'production') {
-    cachedMachineAtom.debugPrivate = true
+    cachedMachineAtom.debugPrivate = true;
   }
 
   const machineAtom = atom(
     (get) => {
-      const cachedMachine = get(cachedMachineAtom)
+      const cachedMachine = get(cachedMachineAtom);
       if (cachedMachine) {
-        return cachedMachine
+        return cachedMachine;
       }
-      let initializing = true
+      let initializing = true;
       const safeGet: typeof get = (...args) => {
         if (initializing) {
-          return get(...args)
+          return get(...args);
         }
-        throw new Error('get not allowed after initialization')
-      }
-      const machine = isGetter(getMachine) ? getMachine(safeGet) : getMachine
-      const options = isGetter(getOptions) ? getOptions(safeGet) : getOptions
-      initializing = false
+        throw new Error('get not allowed after initialization');
+      };
+      const machine = isGetter(getMachine) ? getMachine(safeGet) : getMachine;
+      const options = isGetter(getOptions) ? getOptions(safeGet) : getOptions;
+      initializing = false;
       const {
         guards,
         actions,
@@ -92,38 +94,38 @@ export function atomWithMachine<
         delays,
         context,
         ...interpreterOptions
-      } = options || {}
+      } = options || {};
 
       const machineConfig = {
         ...(guards && { guards }),
         ...(actions && { actions }),
         ...(services && { services }),
         ...(delays && { delays }),
-      }
+      };
 
       const machineWithConfig = machine.withConfig(
         machineConfig as any,
         () => ({
           ...machine.context,
           ...context,
-        })
-      )
+        }),
+      );
 
-      const service = interpret(machineWithConfig, interpreterOptions)
-      return { machine: machineWithConfig, service }
+      const service = interpret(machineWithConfig, interpreterOptions);
+      return { machine: machineWithConfig, service };
     },
     (get, set) => {
-      set(cachedMachineAtom, get(machineAtom))
-    }
-  )
+      set(cachedMachineAtom, get(machineAtom));
+    },
+  );
 
   machineAtom.onMount = (commit) => {
-    commit()
-  }
+    commit();
+  };
 
-  const cachedMachineStateAtom = atom<StateFrom<TMachine> | null>(null)
+  const cachedMachineStateAtom = atom<StateFrom<TMachine> | null>(null);
   if (process.env.NODE_ENV !== 'production') {
-    cachedMachineStateAtom.debugPrivate = true
+    cachedMachineStateAtom.debugPrivate = true;
   }
 
   const machineStateAtom = atom(
@@ -131,66 +133,66 @@ export function atomWithMachine<
       get(cachedMachineStateAtom) ??
       (get(machineAtom).machine.initialState as StateFrom<TMachine>),
     (get, set, registerCleanup: (cleanup: () => void) => void) => {
-      const { service } = get(machineAtom)
+      const { service } = get(machineAtom);
       service.onTransition((nextState: any) => {
-        set(cachedMachineStateAtom, nextState)
-      })
-      service.start()
+        set(cachedMachineStateAtom, nextState);
+      });
+      service.start();
       registerCleanup(() => {
-        const { service } = get(machineAtom)
-        service.stop()
-      })
-    }
-  )
+        const { service } = get(machineAtom);
+        service.stop();
+      });
+    },
+  );
 
   if (process.env.NODE_ENV !== 'production') {
-    machineStateAtom.debugPrivate = true
+    machineStateAtom.debugPrivate = true;
   }
 
   machineStateAtom.onMount = (initialize) => {
-    let unsub: (() => void) | undefined | false
+    let unsub: (() => void) | undefined | false;
 
     initialize((cleanup) => {
       if (unsub === false) {
-        cleanup()
+        cleanup();
       } else {
-        unsub = cleanup
+        unsub = cleanup;
       }
-    })
+    });
 
     return () => {
       if (unsub) {
-        unsub()
+        unsub();
       }
-      unsub = false
-    }
-  }
+      unsub = false;
+    };
+  };
 
   const machineStateWithServiceAtom = atom(
     (get) => get(machineStateAtom),
     (
       get,
       set,
-      event: Parameters<AnyInterpreter['send']>[0] | typeof RESTART
+      event: Parameters<AnyInterpreter['send']>[0] | typeof RESTART,
     ) => {
-      const { service } = get(machineAtom)
+      const { service } = get(machineAtom);
       if (event === RESTART) {
-        service.stop()
-        set(cachedMachineAtom, null)
-        set(machineAtom)
-        const { service: newService } = get(machineAtom)
+        service.stop();
+        set(cachedMachineAtom, null);
+        set(machineAtom);
+        const { service: newService } = get(machineAtom);
         newService.onTransition((nextState: any) => {
-          set(cachedMachineStateAtom, nextState)
-        })
-        newService.start()
+          set(cachedMachineStateAtom, nextState);
+        });
+        newService.start();
       } else {
-        service.send(event)
+        service.send(event);
       }
-    }
-  )
+    },
+  );
 
-  return machineStateWithServiceAtom
+  return machineStateWithServiceAtom;
 }
 
 const isGetter = <T>(v: T | ((get: Getter) => T)): v is (get: Getter) => T =>
-  typeof v === 'function'
+  typeof v === 'function';

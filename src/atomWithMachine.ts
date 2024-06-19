@@ -87,7 +87,7 @@ export function atomWithMachine<TMachine extends AnyStateMachine>(
         actions: actions ?? {},
         actors: actors ?? {},
         delays: delays ?? {},
-        context: context ?? {}
+        context: context ?? {},
       };
 
       const machineWithConfig = machine.provide({ ...machineConfig });

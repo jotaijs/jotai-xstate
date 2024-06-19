@@ -112,7 +112,6 @@ export function atomWithMachine<TMachine extends AnyStateMachine>(
   const cachedSubscriptionAtom = atom<Subscription | null>(null);
   const subscriptionAtom = atom(
     (get) => {
-      get(machineAtom);
       const cachedSub = get(cachedSubscriptionAtom);
       if (!cachedSub) {
         return { unsubscribe() {} };
@@ -120,6 +119,10 @@ export function atomWithMachine<TMachine extends AnyStateMachine>(
       return cachedSub;
     },
     (get, set) => {
+      const previousSub = get(subscriptionAtom);
+      if (previousSub) {
+        previousSub.unsubscribe();
+      }
       const { actor } = get(machineAtom);
       const sub = actor.subscribe((nextState: StateFrom<TMachine>) => {
         set(cachedMachineStateAtom, nextState);
@@ -140,10 +143,8 @@ export function atomWithMachine<TMachine extends AnyStateMachine>(
       const { actor } = get(machineAtom);
       actor.start();
       registerCleanup(() => {
-        const sub = get(subscriptionAtom);
         const { actor } = get(machineAtom);
         actor.stop();
-        sub.unsubscribe();
         set(cachedSubscriptionAtom, null);
         set(cachedMachineStateAtom, null);
         set(cachedMachineAtom, null);
@@ -190,6 +191,7 @@ export function atomWithMachine<TMachine extends AnyStateMachine>(
         set(cachedMachineStateAtom, null);
         set(cachedMachineAtom, null);
         set(machineAtom);
+        set(subscriptionAtom);
         const { actor: newActor } = get(machineAtom);
         newActor.start();
       } else {

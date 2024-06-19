@@ -81,8 +81,8 @@ devDependencies:
     specifier: ^1.6.0
     version: 1.6.0(@types/node@20.12.12)(happy-dom@14.11.0)
   xstate:
-    specifier: ^4.38.3
-    version: 4.38.3
+    specifier: ^5.13.2
+    version: 5.13.2
 
 packages:
 
@@ -3350,8 +3350,8 @@ packages:
     resolution: {integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==}
     dev: true
 
-  /xstate@4.38.3:
-    resolution: {integrity: sha512-SH7nAaaPQx57dx6qvfcIgqKRXIh4L0A1iYEqim4s1u7c9VoCgzZc+63FY90AKU4ZzOC2cfJzTnpO4zK7fCUzzw==}
+  /xstate@5.13.2:
+    resolution: {integrity: sha512-cFbFJUuK7n8NGe9rsT9G8QjK/8KQO5WaxCkpl1GxnvSDb9oXM/+cbZbEtLT/YaAjDfaGA2nzOKyw5oev2LuNRw==}
     dev: true
 
   /yocto-queue@0.1.0:

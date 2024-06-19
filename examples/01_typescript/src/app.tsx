@@ -2,11 +2,28 @@
 
 import { Provider, useAtom } from 'jotai/react';
 import { atom } from 'jotai/vanilla';
-import { atomWithMachine } from 'jotai-xstate';
-import { assign, createMachine } from 'xstate';
+// TODO: Revert back to regular import
+import { RESTART, atomWithMachine } from '../../../src/atomWithMachine';
+import { assign, setup } from 'xstate';
 
 const createEditableMachine = (value: string) =>
-  createMachine<{ value: string }>({
+  setup({
+    types: {
+      events: {} as
+        | { type: 'dblclick' }
+        | { type: 'cancel' }
+        | { type: 'commit'; value: string },
+      context: {} as { value: string },
+    },
+    actions: {
+      commitValue: assign({
+        value: ({ event }) => {
+          if (event.type !== 'commit') throw new Error('Invalid transition');
+          return event.value;
+        },
+      }),
+    },
+  }).createMachine({
     id: 'editable',
     initial: 'reading',
     context: {
@@ -23,9 +40,7 @@ const createEditableMachine = (value: string) =>
           cancel: 'reading',
           commit: {
             target: 'reading',
-            actions: assign({
-              value: (_, { value }) => value,
-            }),
+            actions: { type: 'commitValue' },
           },
         },
       },
@@ -43,7 +58,9 @@ const Toggle = () => {
   return (
     <div>
       {state.matches('reading') && (
-        <strong onDoubleClick={send}>{state.context.value}</strong>
+        <strong onDoubleClick={() => send({ type: 'dblclick' })}>
+          {state.context.value}
+        </strong>
       )}
       {state.matches('editing') && (
         <input
@@ -55,7 +72,7 @@ const Toggle = () => {
               send({ type: 'commit', value: e.currentTarget.value });
             }
             if (e.key === 'Escape') {
-              send('cancel');
+              send({ type: 'cancel' });
             }
           }}
         />
@@ -66,6 +83,7 @@ const Toggle = () => {
         Double-click to edit. Blur the input or press <code>enter</code> to
         commit. Press <code>esc</code> to cancel.
       </div>
+      <button onClick={() => send(RESTART)}>RESTART</button>
     </div>
   );
 };

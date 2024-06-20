@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.5.0] - 2024-06-20
+
+### Added
+
+- Adjusted code for Xstate V5 #8
+
 ## [0.4.0] - 2024-05-26
 
 ### Changed

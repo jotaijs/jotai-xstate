@@ -14,7 +14,7 @@ import {
   type MachineContext,
   type StateConfig,
   type StateFrom,
-  type __ResolvedTypesMetaFrom
+  type __ResolvedTypesMetaFrom,
 } from 'xstate';
 import { atomWithActor } from './atomWithActor.js';
 import { atomWithActorSnapshot } from './atomWithActorSnapshot.js';
@@ -53,9 +53,30 @@ export function atomWithMachine<TMachine extends AnyStateMachine>(
   [MaybeParam<Actor<TMachine>['send']> | typeof RESTART],
   void
 > {
-  const machineLogicAtom = atom<TMachine>((get) =>
-    isGetter(getMachine) ? getMachine(get) : getMachine,
-  );
+  const machineLogicAtom = atom((get) => {
+    let initializing = true;
+    const safeGet: typeof get = (...args) => {
+      if (initializing) {
+        return get(...args);
+      }
+      throw new Error('get not allowed after initialization');
+    };
+    const machine = isGetter(getMachine) ? getMachine(safeGet) : getMachine;
+    const options = isGetter(getOptions)
+      ? getOptions(safeGet)
+      : getOptions ?? {};
+    initializing = false;
+
+    const machineConfig = {
+      guards: options.guards ?? {},
+      actions: options.actions ?? {},
+      actors: options.actors ?? {},
+      delays: options.delays ?? {},
+      context: options.context ?? {},
+    };
+    const machineWithConfig = machine.provide({ ...machineConfig });
+    return machineWithConfig as TMachine;
+  });
 
   const machineActorAtom = atomWithActor(
     (get) => get(machineLogicAtom),
@@ -70,7 +91,11 @@ export function atomWithMachine<TMachine extends AnyStateMachine>(
     (get) => {
       return get(machineStateAtom);
     },
-    (_, set, event: Parameters<Actor<TMachine>['send']>[0] | typeof RESTART) => {
+    (
+      _,
+      set,
+      event: Parameters<Actor<TMachine>['send']>[0] | typeof RESTART,
+    ) => {
       set(machineActorAtom, event);
       if (event === RESTART) {
         set(machineStateAtom);

@@ -78,7 +78,7 @@
     "typescript": "^5.4.5",
     "vite": "^5.2.11",
     "vitest": "^1.6.0",
-    "xstate": "^5.13.2"
+    "xstate": "^5.14.0"
   },
   "peerDependencies": {
     "jotai": ">=2.0.0",

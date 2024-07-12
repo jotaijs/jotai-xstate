@@ -2,21 +2,38 @@
 
 import type { Getter, WritableAtom } from 'jotai/vanilla';
 import { atom } from 'jotai/vanilla';
-import { createActor, type Actor, type AnyActorLogic } from 'xstate';
-import { RESTART, isGetter } from './utils.js';
+import {
+  createActor,
+  type Actor,
+  type ActorOptions,
+  type AnyActorLogic,
+  type ConditionalRequired,
+  type InputFrom,
+  type IsNotNever,
+} from 'xstate';
+import { RESTART, isGetter, type Gettable } from './utils.js';
 
-type Options<TLogic extends AnyActorLogic> = Parameters<
-  typeof createActor<TLogic>
->[1];
+type RequiredOptions<TLogic extends AnyActorLogic> =
+  undefined extends InputFrom<TLogic> ? never : 'input';
 
 type MaybeParam<T> = T extends (v: infer V) => unknown ? V : never;
+
 export function atomWithActor<
   TLogic extends AnyActorLogic,
   TActor extends Actor<TLogic> = Actor<TLogic>,
-  TOptions = Options<TLogic>,
 >(
   getLogic: TLogic | ((get: Getter) => TLogic),
-  getOptions?: TOptions | ((get: Getter) => TOptions),
+  // Needed to match the types and error correctly when logic has input
+  ...[getOptions]: ConditionalRequired<
+    [
+      getOptions?: Gettable<
+        ActorOptions<TLogic> & {
+          [K in RequiredOptions<TLogic>]: unknown;
+        }
+      >,
+    ],
+    IsNotNever<RequiredOptions<TLogic>>
+  >
 ): WritableAtom<TActor, [MaybeParam<TActor['send']> | typeof RESTART], void> {
   const cachedActorAtom = atom<TActor | null>(null);
   if (process.env.NODE_ENV !== 'production') {
@@ -37,11 +54,13 @@ export function atomWithActor<
         throw new Error('get not allowed after initialization');
       };
       const logic = isGetter(getLogic) ? getLogic(safeGet) : getLogic;
-      const options = isGetter(getOptions) ? getOptions(safeGet) : getOptions;
+      const innerOptions = isGetter(getOptions)
+        ? getOptions(safeGet)
+        : getOptions;
       initializing = false;
       // The types are correct but the parsing + current TS rules cause this line to error because of exactOptionalPropertyTypes and i'm not sure how to fix
-      const actor = createActor(logic, options as any);
-      actor.start()
+      const actor = createActor(logic, innerOptions as any);
+      actor.start();
       return actor as TActor;
     },
     (get, set) => {
@@ -56,9 +75,9 @@ export function atomWithActor<
   const resetableActorAtom = atom(
     (get) => get(actorAtom),
     (get, set, event: Parameters<TActor['send']>[0] | typeof RESTART) => {
-      const actor = get(actorAtom)
+      const actor = get(actorAtom);
       if (event === RESTART) {
-        actor.stop()
+        actor.stop();
         set(cachedActorAtom, null);
         set(actorAtom);
       } else {

@@ -19,6 +19,7 @@ import {
   type Subscription,
   type __ResolvedTypesMetaFrom,
 } from 'xstate';
+import { isGetter } from './utils.js';
 
 export const RESTART = Symbol();
 
@@ -202,6 +203,3 @@ export function atomWithMachine<TMachine extends AnyStateMachine>(
 
   return machineStateWithActorAtom;
 }
-
-const isGetter = <T>(v: T | ((get: Getter) => T)): v is (get: Getter) => T =>
-  typeof v === 'function';

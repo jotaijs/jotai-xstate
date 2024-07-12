@@ -39,7 +39,9 @@ export function atomWithActor<
       const logic = isGetter(getLogic) ? getLogic(safeGet) : getLogic;
       const options = isGetter(getOptions) ? getOptions(safeGet) : getOptions;
       initializing = false;
+      // The types are correct but the parsing + current TS rules cause this line to error because of exactOptionalPropertyTypes and i'm not sure how to fix
       const actor = createActor(logic, options as any);
+      actor.start()
       return actor as TActor;
     },
     (get, set) => {
@@ -54,11 +56,13 @@ export function atomWithActor<
   const resetableActorAtom = atom(
     (get) => get(actorAtom),
     (get, set, event: Parameters<TActor['send']>[0] | typeof RESTART) => {
+      const actor = get(actorAtom)
       if (event === RESTART) {
+        actor.stop()
         set(cachedActorAtom, null);
         set(actorAtom);
       } else {
-        get(actorAtom).send(event);
+        actor.send(event);
       }
     },
   );

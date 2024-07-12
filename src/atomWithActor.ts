@@ -17,6 +17,7 @@ type RequiredOptions<TLogic extends AnyActorLogic> =
   undefined extends InputFrom<TLogic> ? never : 'input';
 
 type MaybeParam<T> = T extends (v: infer V) => unknown ? V : never;
+type ActorAtomOptions = { autoStart?: boolean };
 
 export function atomWithActor<
   TLogic extends AnyActorLogic,
@@ -27,9 +28,10 @@ export function atomWithActor<
   ...[getOptions]: ConditionalRequired<
     [
       getOptions?: Gettable<
-        ActorOptions<TLogic> & {
-          [K in RequiredOptions<TLogic>]: unknown;
-        }
+        ActorAtomOptions &
+          ActorOptions<TLogic> & {
+            [K in RequiredOptions<TLogic>]: unknown;
+          }
       >,
     ],
     IsNotNever<RequiredOptions<TLogic>>
@@ -57,10 +59,11 @@ export function atomWithActor<
       const innerOptions = isGetter(getOptions)
         ? getOptions(safeGet)
         : getOptions;
+      const { autoStart = true, ...options } = innerOptions ?? {};
       initializing = false;
       // The types are correct but the parsing + current TS rules cause this line to error because of exactOptionalPropertyTypes and i'm not sure how to fix
-      const actor = createActor(logic, innerOptions as any);
-      actor.start();
+      const actor = createActor(logic, options as any);
+      if (autoStart) actor.start();
       return actor as TActor;
     },
     (get, set) => {

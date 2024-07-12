@@ -19,9 +19,8 @@ import {
   type Subscription,
   type __ResolvedTypesMetaFrom,
 } from 'xstate';
-import { isGetter } from './utils.js';
+import { RESTART, isGetter } from './utils.js';
 
-export const RESTART = Symbol();
 
 export interface MachineAtomOptions<
   TContext extends MachineContext,

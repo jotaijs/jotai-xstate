@@ -4,7 +4,7 @@ import { Provider, useAtom } from 'jotai/react';
 import { atom } from 'jotai/vanilla';
 // TODO: Revert back to regular import
 import { useEffect } from 'react';
-import { assign, emit, fromPromise, setup } from 'xstate';
+import { assign, fromPromise, setup } from 'xstate';
 import { atomWithActor } from '../../../src/atomWithActor';
 import { atomWithActorSnapshot } from '../../../src/atomWithActorSnapshot';
 import { atomWithMachine } from '../../../src/atomWithMachine';
@@ -44,13 +44,7 @@ const createEditableMachine = (value: string) =>
           cancel: 'reading',
           commit: {
             target: 'reading',
-            actions: [
-              { type: 'commitValue' },
-              emit(({ context }) => ({
-                type: 'commitValue',
-                value: context.value,
-              })),
-            ],
+            actions: { type: 'commitValue' },
           },
         },
       },
@@ -113,20 +107,18 @@ const Toggle = () => {
 };
 
 const promiseLogicAtom = atom(
-  fromPromise<
-    string,
-    { duration: number },
-    { type: 'elapsed'; value: number }
-  >(async ({ emit, input }) => {
-    const start = Date.now();
-    let now = Date.now();
-    do {
-      await new Promise((res) => setTimeout(res, 200));
-      emit({ type: 'elapsed', value: now - start });
-      now = Date.now();
-    } while (now - start < input.duration);
-    return 'Promise finished';
-  }),
+  fromPromise<string, { duration: number }, { type: 'elapsed'; value: number }>(
+    async ({ emit, input }) => {
+      const start = Date.now();
+      let now = Date.now();
+      do {
+        await new Promise((res) => setTimeout(res, 200));
+        emit({ type: 'elapsed', value: now - start });
+        now = Date.now();
+      } while (now - start < input.duration);
+      return 'Promise finished';
+    },
+  ),
 );
 
 const durationAtom = atom(5000);

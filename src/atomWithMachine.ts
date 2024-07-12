@@ -80,7 +80,8 @@ export function atomWithMachine<TMachine extends AnyStateMachine>(
 
   const machineActorAtom = atomWithActor(
     (get) => get(machineLogicAtom),
-    getOptions,
+    // The types are correct but the parsing + current TS rules cause this line to error because of exactOptionalPropertyTypes and i'm not sure how to fix
+    getOptions as any,
   );
 
   const machineStateAtom = atomWithActorSnapshot((get) =>

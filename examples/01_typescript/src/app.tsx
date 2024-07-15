@@ -2,12 +2,13 @@
 
 import { Provider, useAtom } from 'jotai/react';
 import { atom } from 'jotai/vanilla';
-// TODO: Revert back to regular import
+import {
+  atomWithActor,
+  atomWithActorSnapshot,
+  atomWithMachine,
+} from 'jotai-xstate';
 import { useEffect } from 'react';
 import { assign, fromPromise, setup } from 'xstate';
-import { atomWithActor } from '../../../src/atomWithActor';
-import { atomWithActorSnapshot } from '../../../src/atomWithActorSnapshot';
-import { atomWithMachine } from '../../../src/atomWithMachine';
 import { RESTART } from '../../../src/utils';
 
 const createEditableMachine = (value: string) =>

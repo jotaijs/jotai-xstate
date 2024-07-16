@@ -6,10 +6,10 @@ import {
   atomWithActor,
   atomWithActorSnapshot,
   atomWithMachine,
+  RESTART,
 } from 'jotai-xstate';
 import { useEffect } from 'react';
 import { assign, fromPromise, setup } from 'xstate';
-import { RESTART } from '../../../src/utils';
 
 const createEditableMachine = (value: string) =>
   setup({

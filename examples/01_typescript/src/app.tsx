@@ -107,8 +107,14 @@ const Toggle = () => {
   );
 };
 
+type PromiseLogicOutput = string;
+type PromiseLogicInput = { duration: number };
+type PromiseLogicEvents =
+  | { type: 'elapsed'; value: number }
+  | { type: 'completed' };
+
 const promiseLogicAtom = atom(
-  fromPromise<string, { duration: number }, { type: 'elapsed'; value: number }>(
+  fromPromise<PromiseLogicOutput, PromiseLogicInput, PromiseLogicEvents>(
     async ({ emit, input }) => {
       const start = Date.now();
       let now = Date.now();
@@ -117,6 +123,8 @@ const promiseLogicAtom = atom(
         emit({ type: 'elapsed', value: now - start });
         now = Date.now();
       } while (now - start < input.duration);
+
+      emit({ type: 'completed' });
       return 'Promise finished';
     },
   ),
@@ -144,8 +152,14 @@ const PromiseActor = () => {
   const [input, setInput] = useAtom(durationAtom);
 
   useEffect(() => {
-    const sub = actor.on('elapsed', (event) => setElapsed(event.value));
-    return sub.unsubscribe;
+    const elapsedSub = actor.on('elapsed', (event) => setElapsed(event.value));
+    const completedSub = actor.on('completed', () =>
+      window.alert('Promise completed'),
+    );
+    return () => {
+      elapsedSub.unsubscribe();
+      completedSub.unsubscribe();
+    };
   }, [actor, setElapsed]);
 
   return (

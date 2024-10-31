@@ -1,5 +1,14 @@
 # Change Log
 
+
+## [0.6.0] - 2024-08-31
+
+### Added
+
+- Added two new atoms, `atomWithActor` and `atomWithActorSnapshot` to conform with XState v5's actor model
+- Refactored `atomWithMachine` to be simpler and consume the two other methods
+- Added tests for the two new methods
+
 ## [Unreleased]
 
 ## [0.5.0] - 2024-06-20

@@ -35,7 +35,7 @@ const actorAtom = atomWithActor(promiseLogic, { input: { id: 2 } });
 
 Either param can also be a Getter function, allowing you to derive data from other atoms
 
-````tsx
+```tsx
 const promiseLogicAtom = atom(fromPromise(({ input }: { input: { id: number } }) =>
     fetch(`http://some.host/${input.id}`),
 ));
@@ -45,6 +45,7 @@ const idAtom = atom(2)
 const actorAtom = atomWithActor((get) => get(promiseLogicAtom), (get) => {
     return { input: { id: get(idAtom) } }
 });
+```
 
 You can fully type all inputs, outputs and events.
 

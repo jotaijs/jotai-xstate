@@ -26,7 +26,7 @@ Can also be called with a second `opts` argument for setting up actor parameters
 
 ```tsx
 const promiseLogic = fromPromise(({ input }: { input: { id: number } }) =>
-    fetch(`http://some.host/${input.id}`),
+  fetch(`http://some.host/${input.id}`),
 );
 
 const actorAtom = atomWithActor(promiseLogic, { input: { id: 2 } });
@@ -36,15 +36,20 @@ const actorAtom = atomWithActor(promiseLogic, { input: { id: 2 } });
 Either param can also be a Getter function, allowing you to derive data from other atoms
 
 ```tsx
-const promiseLogicAtom = atom(fromPromise(({ input }: { input: { id: number } }) =>
+const promiseLogicAtom = atom(
+  fromPromise(({ input }: { input: { id: number } }) =>
     fetch(`http://some.host/${input.id}`),
-));
+  ),
+);
 
-const idAtom = atom(2)
+const idAtom = atom(2);
 
-const actorAtom = atomWithActor((get) => get(promiseLogicAtom), (get) => {
-    return { input: { id: get(idAtom) } }
-});
+const actorAtom = atomWithActor(
+  (get) => get(promiseLogicAtom),
+  (get) => {
+    return { input: { id: get(idAtom) } };
+  },
+);
 ```
 
 You can fully type all inputs, outputs and events.
@@ -87,24 +92,24 @@ const Component = () => {
 
     return ...
 };
-````
+```
 
 **Important!!**
 By default `atomWithActor` will call `actor.start()` as soon as it mounts. To change this behaviour you can provide `{ autoStart: false }` in your options and start it manually
 
 ```tsx
 const promiseLogic = fromPromise(
-    () => new Promise((res) => setTimeout(res, 1000)),
+  () => new Promise((res) => setTimeout(res, 1000)),
 ); // or fromTransition, fromObservable, fromEventObservable, fromCallback, createMachine
 const actorAtom = atomWithActor(promiseLogic, { autoStart: false });
 
 const Component = () => {
-    const [actorRef, send] = useAtom(actorAtom);
-    return (
-        <button onClick={() => actorRef.start()}>
-            Click me to start the timeout
-        </button>
-    );
+  const [actorRef, send] = useAtom(actorAtom);
+  return (
+    <button onClick={() => actorRef.start()}>
+      Click me to start the timeout
+    </button>
+  );
 };
 ```
 
@@ -162,7 +167,7 @@ const Component = () => {
             {snapshot.state === "done" && (
                 <div>
                     Waited for {duration}ms
-                    <br>
+                    <br/>
                     Actor output is: {snapshot.output}
                     <button onClick={() => {
                       // The order here is important.

@@ -3,10 +3,8 @@
 import type { Getter, WritableAtom } from 'jotai/vanilla';
 import { atom } from 'jotai/vanilla';
 import {
-  createActor,
   type Actor,
   type ActorOptions,
-  type AnyActor,
   type AnyStateMachine,
   type Compute,
   type ContextFrom,
@@ -16,11 +14,11 @@ import {
   type MachineContext,
   type StateConfig,
   type StateFrom,
-  type Subscription,
   type __ResolvedTypesMetaFrom,
 } from 'xstate';
-
-export const RESTART = Symbol();
+import { atomWithActor } from './atomWithActor.js';
+import { atomWithActorSnapshot } from './atomWithActorSnapshot.js';
+import { RESTART, isGetter } from './utils.js';
 
 export interface MachineAtomOptions<
   TContext extends MachineContext,
@@ -55,153 +53,56 @@ export function atomWithMachine<TMachine extends AnyStateMachine>(
   [MaybeParam<Actor<TMachine>['send']> | typeof RESTART],
   void
 > {
-  const cachedMachineAtom = atom<{
-    machine: AnyStateMachine;
-    actor: AnyActor;
-  } | null>(null);
-  if (process.env.NODE_ENV !== 'production') {
-    cachedMachineAtom.debugPrivate = true;
-  }
-
-  const machineAtom = atom(
-    (get) => {
-      const cachedMachine = get(cachedMachineAtom);
-      if (cachedMachine) {
-        return cachedMachine;
+  const machineLogicAtom = atom((get) => {
+    let initializing = true;
+    const safeGet: typeof get = (...args) => {
+      if (initializing) {
+        return get(...args);
       }
-      let initializing = true;
-      const safeGet: typeof get = (...args) => {
-        if (initializing) {
-          return get(...args);
-        }
-        throw new Error('get not allowed after initialization');
-      };
-      const machine = isGetter(getMachine) ? getMachine(safeGet) : getMachine;
-      const options = isGetter(getOptions) ? getOptions(safeGet) : getOptions;
-      initializing = false;
-      const { guards, actions, actors, delays, context, ...actorOptions } =
-        options || {};
-
-      const machineConfig = {
-        guards: guards ?? {},
-        actions: actions ?? {},
-        actors: actors ?? {},
-        delays: delays ?? {},
-        context: context ?? {},
-      };
-
-      const machineWithConfig = machine.provide({ ...machineConfig });
-      const actor = createActor(machineWithConfig, actorOptions);
-      return { machine: machineWithConfig, actor };
-    },
-    (get, set) => {
-      set(cachedMachineAtom, get(machineAtom));
-      set(subscriptionAtom);
-    },
-  );
-
-  machineAtom.onMount = (commit) => {
-    commit();
-  };
-
-  const cachedMachineStateAtom = atom<StateFrom<TMachine> | null>(null);
-  if (process.env.NODE_ENV !== 'production') {
-    cachedMachineStateAtom.debugPrivate = true;
-  }
-
-  const cachedSubscriptionAtom = atom<Subscription | null>(null);
-  const subscriptionAtom = atom(
-    (get) => {
-      const cachedSub = get(cachedSubscriptionAtom);
-      if (!cachedSub) {
-        return { unsubscribe() {} };
-      }
-      return cachedSub;
-    },
-    (get, set) => {
-      const previousSub = get(subscriptionAtom);
-      if (previousSub) {
-        previousSub.unsubscribe();
-      }
-      const { actor } = get(machineAtom);
-      const sub = actor.subscribe((nextState: StateFrom<TMachine>) => {
-        set(cachedMachineStateAtom, nextState);
-      });
-      set(cachedSubscriptionAtom, sub);
-    },
-  );
-
-  const machineStateAtom = atom(
-    (get) => {
-      get(subscriptionAtom);
-      return (
-        get(cachedMachineStateAtom) ??
-        (get(machineAtom).actor.getSnapshot() as StateFrom<TMachine>)
-      );
-    },
-    (get, set, registerCleanup: (cleanup: () => void) => void) => {
-      const { actor } = get(machineAtom);
-      actor.start();
-      registerCleanup(() => {
-        const { actor } = get(machineAtom);
-        actor.stop();
-        set(cachedSubscriptionAtom, null);
-        set(cachedMachineStateAtom, null);
-        set(cachedMachineAtom, null);
-      });
-    },
-  );
-
-  machineStateAtom.onMount = (initialize) => {
-    let unsub: (() => void) | undefined | false;
-
-    initialize((cleanup) => {
-      if (unsub === false) {
-        cleanup();
-      } else {
-        unsub = cleanup;
-      }
-    });
-
-    return () => {
-      if (unsub) {
-        unsub();
-      }
-      unsub = false;
+      throw new Error('get not allowed after initialization');
     };
-  };
+    const machine = isGetter(getMachine) ? getMachine(safeGet) : getMachine;
+    const options = isGetter(getOptions)
+      ? getOptions(safeGet)
+      : getOptions ?? {};
+    initializing = false;
 
-  if (process.env.NODE_ENV !== 'production') {
-    machineStateAtom.debugPrivate = true;
-  }
+    const machineConfig = {
+      guards: options.guards ?? {},
+      actions: options.actions ?? {},
+      actors: options.actors ?? {},
+      delays: options.delays ?? {},
+      context: options.context ?? {},
+    };
+    const machineWithConfig = machine.provide({ ...machineConfig });
+    return machineWithConfig as TMachine;
+  });
 
-  if (process.env.NODE_ENV !== 'production') {
-    machineStateAtom.debugPrivate = true;
-  }
+  const machineActorAtom = atomWithActor(
+    (get) => get(machineLogicAtom),
+    // The types are correct but the parsing + current TS rules cause this line to error because of exactOptionalPropertyTypes and i'm not sure how to fix
+    getOptions as any,
+  );
+
+  const machineStateAtom = atomWithActorSnapshot((get) =>
+    get(machineActorAtom),
+  );
 
   const machineStateWithActorAtom = atom(
     (get) => {
       return get(machineStateAtom);
     },
-    (get, set, event: Parameters<AnyActor['send']>[0] | typeof RESTART) => {
-      const { actor } = get(machineAtom);
+    (
+      _,
+      set,
+      event: Parameters<Actor<TMachine>['send']>[0] | typeof RESTART,
+    ) => {
+      set(machineActorAtom, event);
       if (event === RESTART) {
-        actor.stop();
-        set(cachedSubscriptionAtom, null);
-        set(cachedMachineStateAtom, null);
-        set(cachedMachineAtom, null);
-        set(machineAtom);
-        set(subscriptionAtom);
-        const { actor: newActor } = get(machineAtom);
-        newActor.start();
-      } else {
-        actor.send(event);
+        set(machineStateAtom);
       }
     },
   );
 
   return machineStateWithActorAtom;
 }
-
-const isGetter = <T>(v: T | ((get: Getter) => T)): v is (get: Getter) => T =>
-  typeof v === 'function';

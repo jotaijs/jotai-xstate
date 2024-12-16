@@ -6,7 +6,7 @@ import { type AnyActor, type SnapshotFrom, type Subscription } from 'xstate';
 import { isGetter } from './utils.js';
 
 export function atomWithActorSnapshot<TActor extends AnyActor>(
-  getActor: TActor | ((get: Getter) => TActor),
+  getActor: undefined | TActor | ((get: Getter) => TActor | undefined),
 ): WritableAtom<SnapshotFrom<TActor>, never[], void> {
   const actorAtom = atom((get) =>
     isGetter(getActor) ? getActor(get) : getActor,
@@ -34,6 +34,7 @@ export function atomWithActorSnapshot<TActor extends AnyActor>(
       if (dontRenew) return;
 
       const actor = get(actorAtom);
+      if (!actor) return;
       set(cachedActorSnapshotAtom, actor.getSnapshot());
 
       const sub = actor.subscribe((nextSnapshot: SnapshotFrom<TActor>) => {
@@ -48,7 +49,7 @@ export function atomWithActorSnapshot<TActor extends AnyActor>(
       get(subscriptionAtom);
       return (
         get(cachedActorSnapshotAtom) ??
-        (get(actorAtom).getSnapshot() as SnapshotFrom<TActor>)
+        (get(actorAtom)?.getSnapshot() as SnapshotFrom<TActor>)
       );
     },
     (_, set, registerCleanup: (cleanup: () => void) => void) => {

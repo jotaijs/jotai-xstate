@@ -1,5 +1,11 @@
 # Change Log
 
+## [0.6.1] - 2025-01-20
+
+### Added
+
+- `atomWithActorSnapshot` not supports `undefined` or a getter that returns `undefined`, making it possible to watch the state of conditional or temporary actors
+
 ## [0.6.0] - 2024-08-31
 
 ### Added

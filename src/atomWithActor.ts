@@ -75,9 +75,13 @@ export function atomWithActor<
     commit();
   };
 
-  const resetableActorAtom = atom(
+  const resetableActorAtom = atom<
+    TActor,
+    [Parameters<TActor['send']>[0] | typeof RESTART],
+    void
+  >(
     (get) => get(actorAtom),
-    (get, set, event: Parameters<TActor['send']>[0] | typeof RESTART) => {
+    (get, set, event) => {
       const actor = get(actorAtom);
       if (event === RESTART) {
         actor.stop();

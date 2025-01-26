@@ -12,7 +12,7 @@
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
-      "jotai-xstate": ["./src/index.js"]
+      "jotai-xstate": ["./src/index.ts"]
     }
   },
   "exclude": ["dist", "examples"]

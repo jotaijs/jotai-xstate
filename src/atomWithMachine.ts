@@ -64,7 +64,7 @@ export function atomWithMachine<TMachine extends AnyStateMachine>(
     const machine = isGetter(getMachine) ? getMachine(safeGet) : getMachine;
     const options = isGetter(getOptions)
       ? getOptions(safeGet)
-      : getOptions ?? {};
+      : (getOptions ?? {});
     initializing = false;
 
     const machineConfig = {
